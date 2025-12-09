@@ -1,20 +1,32 @@
-export default function App() {
-  return (
-    <div className="min-h-screen flex justify-center bg-blue-950">
-      <div className="p-6 gap-y-6 flex flex-col justify-start w-[80%] lg:w-[70%]">
-        <h1 className="w-full p-6 bg-amber-100 font-extrabold">
-          React App Starter
-        </h1>
-        <section className="w-full p-5 bg-amber-100 flex">
-          <ul className="list-inside list-disc flex-1">
-            <span className="font-semibold">Tech Stack:</span>
-            <li>Vite</li>
-            <li>React</li>
-            <li>JavaScript</li>
-            <li>Tailwind</li>
-          </ul>
-        </section>
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import Layout from "./components/Layout";
+import Home from "./views/Home";
+import About from "./views/About";
+import Contact from "./views/Contact";
+import Products from "./views/Products";
+import ProductDetail from "./views/ProductDetail";
+import FetchAPI_EmptyArray from "./views/FetchAPI_EmptyArray";
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <Layout />,
+    errorElement: (
+      <div className="min-h-screen flex justify-center items-center">
+        <h1 className="text-4xl">404 - Page Not Found 😭</h1>
       </div>
-    </div>
-  );
+    ),
+    children: [
+      { path: "/", element: <Home /> },
+      { path: "about", element: <About /> },
+      { path: "contact", element: <Contact /> },
+      { path: "products", element: <Products /> },
+      { path: "products/:productId", element: <ProductDetail /> },
+      { path: "FetchAPI_EmptyArray", element: <FetchAPI_EmptyArray /> },
+    ],
+  },
+]);
+
+export default function App() {
+  return <RouterProvider router={router} />;
 }
