@@ -6,6 +6,7 @@ import Contact from "./views/Contact";
 import Products from "./views/Products";
 import ProductDetail from "./views/ProductDetail";
 import FetchAPI_EmptyArray from "./views/FetchAPI_EmptyArray";
+import NasaAPI from "./views/NasaAPI";
 
 const router = createBrowserRouter([
   {
@@ -23,6 +24,7 @@ const router = createBrowserRouter([
       { path: "products", element: <Products /> },
       { path: "products/:productId", element: <ProductDetail /> },
       { path: "FetchAPI_EmptyArray", element: <FetchAPI_EmptyArray /> },
+      { path: "nasa", element: <NasaAPI /> },
     ],
   },
 ]);

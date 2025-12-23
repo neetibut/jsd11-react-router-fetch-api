@@ -19,6 +19,9 @@ export default function Navbar() {
         <li>
           <Link to="/FetchAPI_EmptyArray">Fetch 1</Link>
         </li>
+        <li>
+          <Link to="/nasa">NASA</Link>
+        </li>
       </ul>
     </nav>
   );
