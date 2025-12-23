@@ -6,26 +6,20 @@ export default function NasaAPI() {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [selected, setSelected] = useState(null);
-  const [details, setDetails] = useState({
-    manifest: [],
-    metadataUrl: null,
-    captionsUrl: null,
-    metadata: null,
-  });
+  // Per-asset details state keyed by nasa_id
+  const [detailsById, setDetailsById] = useState({}); // { [nasaId]: { manifest, metadataUrl, captionsUrl, metadata } }
+  const [detailsLoadingById, setDetailsLoadingById] = useState({}); // { [nasaId]: boolean }
+  const [detailsErrorById, setDetailsErrorById] = useState({}); // { [nasaId]: Error | null }
 
   const handleSearch = async (e) => {
     e?.preventDefault();
     if (!query.trim()) return;
     setLoading(true);
     setError(null);
-    setSelected(null);
-    setDetails({
-      manifest: [],
-      metadataUrl: null,
-      captionsUrl: null,
-      metadata: null,
-    });
+    // Reset per-id details when starting a new search
+    setDetailsById({});
+    setDetailsLoadingById({});
+    setDetailsErrorById({});
     try {
       const res = await axios.get("https://images-api.nasa.gov/search", {
         params: { q: query },
@@ -56,18 +50,23 @@ export default function NasaAPI() {
   };
 
   const loadDetails = async (nasaId) => {
-    setSelected(nasaId);
-    setDetails({
-      manifest: [],
-      metadataUrl: null,
-      captionsUrl: null,
-      metadata: null,
-    });
-    setError(null);
+    if (!nasaId) return;
+    const safeId = encodeURIComponent(nasaId);
+    setDetailsLoadingById((prev) => ({ ...prev, [nasaId]: true }));
+    setDetailsErrorById((prev) => ({ ...prev, [nasaId]: null }));
+    setDetailsById((prev) => ({
+      ...prev,
+      [nasaId]: {
+        manifest: [],
+        metadataUrl: null,
+        captionsUrl: null,
+        metadata: null,
+      },
+    }));
     try {
       // Manifest: list of asset files (images, videos, etc.)
       const manifestRes = await axios.get(
-        `https://images-api.nasa.gov/asset/${nasaId}`
+        `https://images-api.nasa.gov/asset/${safeId}`
       );
       const manifestItems = manifestRes?.data?.collection?.items || [];
       const manifestUrls = manifestItems.map((i) => i.href).filter(Boolean);
@@ -77,7 +76,7 @@ export default function NasaAPI() {
       let metadata = null;
       try {
         const metaLocRes = await axios.get(
-          `https://images-api.nasa.gov/metadata/${nasaId}`
+          `https://images-api.nasa.gov/metadata/${safeId}`
         );
         metadataUrl = metaLocRes?.data?.location || null;
         if (metadataUrl && /\.json$/i.test(metadataUrl)) {
@@ -92,21 +91,26 @@ export default function NasaAPI() {
       let captionsUrl = null;
       try {
         const capLocRes = await axios.get(
-          `https://images-api.nasa.gov/captions/${nasaId}`
+          `https://images-api.nasa.gov/captions/${safeId}`
         );
         captionsUrl = capLocRes?.data?.location || null;
       } catch {
         // ignore captions failures
       }
 
-      setDetails({
-        manifest: manifestUrls,
-        metadataUrl,
-        captionsUrl,
-        metadata,
-      });
+      setDetailsById((prev) => ({
+        ...prev,
+        [nasaId]: {
+          manifest: manifestUrls,
+          metadataUrl,
+          captionsUrl,
+          metadata,
+        },
+      }));
     } catch (err) {
-      setError(err);
+      setDetailsErrorById((prev) => ({ ...prev, [nasaId]: err }));
+    } finally {
+      setDetailsLoadingById((prev) => ({ ...prev, [nasaId]: false }));
     }
   };
 
@@ -144,83 +148,7 @@ export default function NasaAPI() {
           Try a search to see results.
         </div>
       )}
-      {selected && (
-        <div className="mt-8 p-6 rounded-lg bg-slate-50 border">
-          <h3 className="text-xl font-semibold mb-3">
-            Asset Details: {selected}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="font-medium mb-2">
-                Manifest Files ({details.manifest.length})
-              </h4>
-              <ul className="space-y-2 max-h-64 overflow-auto">
-                {details.manifest.slice(0, 25).map((url) => (
-                  <li key={url} className="text-sm">
-                    <a
-                      className="text-teal-700 underline"
-                      href={url}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {url}
-                    </a>
-                  </li>
-                ))}
-                {details.manifest.length > 25 && (
-                  <li className="text-sm text-gray-600">…and more</li>
-                )}
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-medium mb-2">Metadata</h4>
-              {details.metadataUrl ? (
-                <div className="text-sm">
-                  <p>
-                    Location:{" "}
-                    <a
-                      className="text-teal-700 underline"
-                      href={details.metadataUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {details.metadataUrl}
-                    </a>
-                  </p>
-                  {details.metadata ? (
-                    <pre className="mt-2 p-3 bg-white border rounded max-h-64 overflow-auto text-xs">
-                      {JSON.stringify(details.metadata, null, 2)}
-                    </pre>
-                  ) : (
-                    <p className="mt-2 text-gray-600">
-                      Open the location link to view metadata.
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-600">No metadata available.</p>
-              )}
-
-              <h4 className="font-medium mt-4 mb-2">Captions</h4>
-              {details.captionsUrl ? (
-                <p className="text-sm">
-                  Location:{" "}
-                  <a
-                    className="text-teal-700 underline"
-                    href={details.captionsUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {details.captionsUrl}
-                  </a>
-                </p>
-              ) : (
-                <p className="text-sm text-gray-600">No captions available.</p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Per-card details panels will render below each result */}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {results.map((item) => (
@@ -246,21 +174,108 @@ export default function NasaAPI() {
                 </p>
                 <div className="mt-3 flex gap-2">
                   <button
-                    className="px-3 py-1 rounded bg-teal-500 text-white"
+                    type="button"
+                    className="px-3 py-1 rounded bg-teal-500 hover:bg-teal-700 transition-all cursor-pointer text-white disabled:opacity-60 disabled:cursor-not-allowed"
+                    disabled={!item.nasa_id || detailsLoadingById[item.nasa_id]}
                     onClick={() => loadDetails(item.nasa_id)}
                   >
-                    Details
+                    {detailsLoadingById[item.nasa_id] ? "Loading…" : "Details"}
                   </button>
-                  <a
-                    className="px-3 py-1 rounded bg-gray-200"
-                    href={`https://images-api.nasa.gov/asset/${item.nasa_id}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Open Manifest
-                  </a>
                 </div>
               </div>
+            </div>
+            {/* Inline details panel per item */}
+            <div className="mt-3">
+              {detailsErrorById[item.nasa_id] && (
+                <p className="text-sm text-red-600">
+                  {detailsErrorById[item.nasa_id].message ||
+                    "Failed to load details"}
+                </p>
+              )}
+              {detailsLoadingById[item.nasa_id] && (
+                <p className="text-sm text-gray-600">Fetching details…</p>
+              )}
+              {detailsById[item.nasa_id] &&
+                !detailsLoadingById[item.nasa_id] && (
+                  <div className="p-4 rounded border bg-slate-50">
+                    <h4 className="font-medium mb-2">
+                      Manifest Files (
+                      {detailsById[item.nasa_id].manifest.length})
+                    </h4>
+                    <ul className="space-y-2 max-h-64 overflow-auto">
+                      {detailsById[item.nasa_id].manifest
+                        .slice(0, 25)
+                        .map((url) => (
+                          <li key={url} className="text-sm">
+                            <a
+                              className="text-teal-700 underline"
+                              href={url}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              {url}
+                            </a>
+                          </li>
+                        ))}
+                      {detailsById[item.nasa_id].manifest.length > 25 && (
+                        <li className="text-sm text-gray-600">…and more</li>
+                      )}
+                    </ul>
+
+                    <h4 className="font-medium mt-4 mb-2">Metadata</h4>
+                    {detailsById[item.nasa_id].metadataUrl ? (
+                      <div className="text-sm">
+                        <p>
+                          Location:{" "}
+                          <a
+                            className="text-teal-700 underline"
+                            href={detailsById[item.nasa_id].metadataUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {detailsById[item.nasa_id].metadataUrl}
+                          </a>
+                        </p>
+                        {detailsById[item.nasa_id].metadata ? (
+                          <pre className="mt-2 p-3 bg-white border rounded max-h-64 overflow-auto text-xs">
+                            {JSON.stringify(
+                              detailsById[item.nasa_id].metadata,
+                              null,
+                              2
+                            )}
+                          </pre>
+                        ) : (
+                          <p className="mt-2 text-gray-600">
+                            Open the location link to view metadata.
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-600">
+                        No metadata available.
+                      </p>
+                    )}
+
+                    <h4 className="font-medium mt-4 mb-2">Captions</h4>
+                    {detailsById[item.nasa_id].captionsUrl ? (
+                      <p className="text-sm">
+                        Location:{" "}
+                        <a
+                          className="text-teal-700 underline"
+                          href={detailsById[item.nasa_id].captionsUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {detailsById[item.nasa_id].captionsUrl}
+                        </a>
+                      </p>
+                    ) : (
+                      <p className="text-sm text-gray-600">
+                        No captions available.
+                      </p>
+                    )}
+                  </div>
+                )}
             </div>
           </div>
         ))}
