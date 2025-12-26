@@ -1,11 +1,6 @@
 import axios from "axios";
 
-// Normalize base URL from env or default to local Express server
-const rawBase = import.meta.env?.VITE_API_URL || "http://localhost:3001/api/v1";
-const baseURL =
-  typeof rawBase === "string"
-    ? rawBase.replace(/\/+$/, "")
-    : "http://localhost:3001/api/v1";
+const baseURL = "http://localhost:3001/api/v1";
 
 // Shared axios client
 export const client = axios.create({
