@@ -7,6 +7,8 @@ import Products from "./views/Products";
 import ProductDetail from "./views/ProductDetail";
 import FetchAPI_EmptyArray from "./views/FetchAPI_EmptyArray";
 import NasaAPI from "./views/NasaAPI";
+import Users from "./views/Users";
+import UserDetail from "./views/UserDetail";
 
 const router = createBrowserRouter([
   {
@@ -25,6 +27,9 @@ const router = createBrowserRouter([
       { path: "products/:productId", element: <ProductDetail /> },
       { path: "FetchAPI_EmptyArray", element: <FetchAPI_EmptyArray /> },
       { path: "nasa", element: <NasaAPI /> },
+      // Phase 2: Define Users routes with temporary placeholders
+      { path: "users", element: <Users /> },
+      { path: "users/:userId", element: <UserDetail /> },
     ],
   },
 ]);

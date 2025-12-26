@@ -22,6 +22,9 @@ export default function Navbar() {
         <li>
           <Link to="/nasa">NASA</Link>
         </li>
+        <li>
+          <Link to="/users">Users</Link>
+        </li>
       </ul>
     </nav>
   );
